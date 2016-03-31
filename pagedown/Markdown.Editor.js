@@ -28,8 +28,8 @@
 	// The text that appears on the upper part of the dialog box when
 	// entering links.
 	var linkDialogText = '<h3 style="margin-top:0">Enter the web address.</h3>';
-	var imageDialogText = '<h3 style="margin-top:0">Enter the image URL.</h3>';
-
+	var imageDialogText = '<h3 style="margin-top:0">Enter the image URL or upload a local file.</h3>';
+	var uploadErrorText = 'The image could not be uploaded. Please try again later.' // Default error when everything went wrong.
 	// The default text that appears in the dialog input box when entering
 	// links.
 	var imageDefaultText = "http://";
@@ -1021,13 +1021,16 @@
     // callback: The function which is executed when the prompt is dismissed, either via OK or Cancel.
     //      It receives a single argument; either the entered text (if OK was chosen) or null (if Cancel
     //      was chosen).
-    ui.prompt = function (text, defaultInputText, callback) {
+    ui.prompt = function (text, defaultInputText, callback, useImageUpload) {
 
         // These variables need to be declared at this level since they are used
         // in multiple functions.
-        var dialog;         // The dialog box.
+        var dialog;        // The dialog box.
         var input;         // The text box where you enter the hyperlink.
-
+		var upload;        // The upload button.
+		var form;		   // The dialog form.
+		var files;         // Files to be uploaded.
+		var immediatelyUploaded; 
 
         if (defaultInputText === undefined) {
             defaultInputText = "";
@@ -1065,10 +1068,60 @@
             return false;
         };
 
+		// Callback when a file to upload has been selected.
+		var uploadSelected = function(event) {
+			files = event.target.files;
+			immediatelyUploaded = uploadImage();
+			return immediatelyUploaded;
+		};
 
+		// Handling the image upload.
+		var uploadImage = function() {
+			var retVal = false;
+			if (files.length >= 1) {
+				var url = form.action;
+				var formData = new FormData();
+				formData.append(upload.name,files[0]);
+				$.ajax({
+					url: url,
+					type: "POST",
+					data: formData,
+					async: false,
+					success: function(data,textStatus,jqXHR) {
+						var b = $(data).filter("blob");
+						var e = $(data).filter("error");
+						var tb = b.text();
+						var te = e.text();
+						if (e.length == 1 && te.length>0) {
+							alert(te);
+						}
+						else if (b.length == 1 && tb.length>0) {
+							input.value = tb;
+							retVal = true;
+						}
+						else alert(uploadErrorText);
+					},
+					error: function(data,textStatus,jqXHR) {
+						var p = $(data).filter("error");
+						var t = p.text();
+						if (p.length == 1 && t.length>0) {
+							alert(t);
+						}
+						else alert(uploadErrorText);
+					},	
+					dataType: "text",			
+					cache: false,
+					contentType: false,
+					processData: false
+				});
+			}	
+			return retVal;
+		};
 
         // Create the text input box form/window.
         var createDialog = function () {
+
+			immediatelyUploaded = false;
 
             // The main dialog box.
             dialog = doc.createElement("div");
@@ -1085,9 +1138,8 @@
             dialog.appendChild(question);
 
             // The web form container for the text box and buttons.
-            var form = doc.createElement("form"),
-                style = form.style;
-            form.onsubmit = function () { return close(false); };
+            form = doc.createElement("form");
+            style = form.style;
             style.padding = "0";
             style.margin = "0";
             style.cssFloat = "left";
@@ -1106,16 +1158,34 @@
             style.marginLeft = style.marginRight = "auto";
             form.appendChild(input);
 
+			// The upload button.
+			if (useImageUpload) {
+				form.enctype = "multipart/form-data";
+				form.action = qa_root + "?qa=markdown-editor-upload";
+				upload = doc.createElement("input");
+				upload.name = "imageUpload";
+				upload.type = "file";
+				upload.accept = "image/*";
+				upload.id = "markdown-editor-image-upload";
+				upload.onchange = uploadSelected;
+		        style = upload.style;
+		        style.display = "block";
+		        style.width = "80%";
+		        style.marginLeft = style.marginRight = "auto";
+				form.appendChild(upload);
+			}
+
             // The ok button
             var okButton = doc.createElement("input");
             okButton.type = "button";
-            okButton.onclick = function () { return close(false); };
+            okButton.onclick = function () {
+				return (!useImageUpload || upload.value.length===0 || immediatelyUploaded || uploadImage()) && close(false);
+			};
             okButton.value = "OK";
             style = okButton.style;
             style.margin = "10px";
             style.display = "inline";
             style.width = "7em";
-
 
             // The cancel button
             var cancelButton = doc.createElement("input");
@@ -1735,7 +1805,7 @@
 
             if (isImage) {
                 if (!this.hooks.insertImageDialog(linkEnteredCallback))
-                    ui.prompt(imageDialogText, imageDefaultText, linkEnteredCallback);
+                    ui.prompt(imageDialogText, imageDefaultText, linkEnteredCallback, true);
             }
             else {
                 ui.prompt(linkDialogText, linkDefaultText, linkEnteredCallback);

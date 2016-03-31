@@ -34,3 +34,4 @@ qa_register_plugin_module('viewer', 'qa-markdown-viewer.php', 'qa_markdown_viewe
 qa_register_plugin_module('event', 'qa-md-events.php', 'qa_markdown_events', 'Markdown events');
 qa_register_plugin_layer('qa-md-layer.php', 'Markdown Editor layer');
 qa_register_plugin_phrases('qa-md-lang-*.php', 'markdown');
+qa_register_plugin_module('page', 'qa-markdown-upload.php', 'qa_markdown_upload', 'Markdown Upload');

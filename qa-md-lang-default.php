@@ -14,4 +14,5 @@ return array(
 	'admin_comments_note' => 'Sets a post as plaintext when converting answers to comments.',
 	'admin_syntax' => 'Use syntax highlighting',
 	'admin_syntax_note' => 'Integrates highlight.js for code blocks.',
+    'admin_uploadmax' => "Maximum size of uploads",
 );

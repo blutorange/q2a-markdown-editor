@@ -6,6 +6,7 @@
 
 class qa_markdown_editor
 {
+
 	private $pluginurl;
 	private $cssopt = 'markdown_editor_css';
 	private $convopt = 'markdown_comment';
@@ -13,7 +14,16 @@ class qa_markdown_editor
 
 	public function load_module($directory, $urltoroot)
 	{
+		require_once QA_INCLUDE_DIR.'app/upload.php';
 		$this->pluginurl = $urltoroot;
+	}
+
+	public function option_default($option)
+	{
+		if ($option == 'markdowneditor_uploadmax') {
+			require_once QA_INCLUDE_DIR.'app/upload.php';
+			return min(qa_get_max_upload_size(), 1048576);
+		}
 	}
 
 	public function calc_quality($content, $format)
@@ -28,12 +38,12 @@ class qa_markdown_editor
 		$html .= '<h3>'.qa_lang_html('markdown/preview').'</h3>' . "\n";
 		$html .= '<div id="wmd-preview-'.$fieldname.'" class="wmd-preview"></div>' . "\n";
 
-        // $html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.Converter.js"></script>' . "\n";
-        // $html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.Sanitizer.js"></script>' . "\n";
-        // $html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.Editor.js"></script>' . "\n";
+         $html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.Converter.js"></script>' . "\n";
+         $html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.Sanitizer.js"></script>' . "\n";
+         $html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.Editor.js"></script>' . "\n";
 
 		// comment this script and uncomment the 3 above to use the non-minified code
-    	$html .= '<script src="'.$this->pluginurl.'pagedown/markdown.min.js"></script>' . "\n";
+    	//$html .= '<script src="'.$this->pluginurl.'pagedown/markdown.min.js"></script>' . "\n";
 
 		return array('type'=>'custom', 'html'=>$html);
 	}
@@ -62,6 +72,8 @@ class qa_markdown_editor
 	{
 		$saved_msg = null;
 
+		require_once QA_INCLUDE_DIR.'app/upload.php';
+
 		if (qa_clicked('markdown_save')) {
 			// save options
 			$hidecss = qa_post_text('md_hidecss') ? '1' : '0';
@@ -70,7 +82,8 @@ class qa_markdown_editor
 			qa_opt($this->convopt, $convert);
 			$convert = qa_post_text('md_highlightjs') ? '1' : '0';
 			qa_opt($this->hljsopt, $convert);
-
+			qa_opt("markdowneditor_uploadmax", min(qa_get_max_upload_size(), 1048576*(float)qa_post_text('md_uploadmax')));
+			
 			$saved_msg = qa_lang_html('admin/options_saved');
 		}
 
@@ -101,6 +114,13 @@ class qa_markdown_editor
 					'value' => qa_opt($this->hljsopt) === '1',
 					'note' => qa_lang_html('markdown/admin_syntax_note'),
 				),
+				'uploadmax' => array(
+					'label' => qa_lang_html('markdown/admin_uploadmax'),
+					'suffix' => 'MB (max '.$this->bytes_to_mega_html(qa_get_max_upload_size()).')',
+					'type' => 'number',
+					'value' => $this->bytes_to_mega_html(qa_opt("markdowneditor_uploadmax")),
+					'tags' => 'NAME="md_uploadmax"',
+				),
 			),
 
 			'buttons' => array(
@@ -113,6 +133,10 @@ class qa_markdown_editor
 		);
 	}
 
+	private function bytes_to_mega_html($bytes)
+	{
+		return qa_html(number_format($bytes/1048576, 1));
+	}
 
 	// copy of qa-base.php > qa_post_text, with trim() function removed.
 	private function _my_qa_post_text($field)
