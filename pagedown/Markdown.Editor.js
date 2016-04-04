@@ -1,4 +1,4 @@
-﻿// needs Markdown.Converter.js at the moment
+// needs Markdown.Converter.js at the moment
 
 (function () {
 
@@ -17,43 +17,6 @@
             isOpera: /opera/.test(nav.userAgent.toLowerCase())
         };
 
-    var defaultsStrings = {
-        bold: "Strong <strong> Ctrl+B",
-        boldexample: "strong text",
-
-        italic: "Emphasis <em> Ctrl+I",
-        italicexample: "emphasized text",
-
-        link: "Hyperlink <a> Ctrl+L",
-        linkdescription: "enter link description here",
-        linkdialog: "<p><b>Insert Hyperlink</b></p><p>http://example.com/ \"optional title\"</p>",
-
-        quote: "Blockquote <blockquote> Ctrl+Q",
-        quoteexample: "Blockquote",
-
-        code: "Code Sample <pre><code> Ctrl+K",
-        codeexample: "enter code here",
-
-        image: "Image <img> Ctrl+G",
-        imagedescription: "enter image description here",
-        imagedialog: "<p><b>Insert Image</b></p><p>http://example.com/images/diagram.jpg \"optional title\"<br><br>Need <a href='http://www.google.com/search?q=free+image+hosting' target='_blank'>free image hosting?</a></p>",
-
-        olist: "Numbered List <ol> Ctrl+O",
-        ulist: "Bulleted List <ul> Ctrl+U",
-        litem: "List item",
-
-        heading: "Heading <h1>/<h2> Ctrl+H",
-        headingexample: "Heading",
-
-        hr: "Horizontal Rule <hr> Ctrl+R",
-
-        undo: "Undo - Ctrl+Z",
-        redo: "Redo - Ctrl+Y",
-        redomac: "Redo - Ctrl+Shift+Z",
-
-        help: "Markdown Editing Help"
-    };
-
 
     // -------------------------------------------------------------------
     //  YOUR CHANGES GO HERE
@@ -62,45 +25,41 @@
     // this area.
     // -------------------------------------------------------------------
 
-    // The default text that appears in the dialog input box when entering
-    // links.
-    var imageDefaultText = "http://";
-    var linkDefaultText = "http://";
+	// The text that appears on the upper part of the dialog box when
+	// entering links.
+	var linkDialogText = '<h3 style="margin-top:0">Bitte geben Sie die Webadresse ein.</h3>';
+	var imageDialogText = '<h3 style="margin-top:0">Bitte geben Sie eine URL ein oder laden ein Bild hoch.</h3>';
+	var uploadErrorText = 'Das Bild konnte nicht hochgeladen werden. Bitte versuchen Sie es später erneut.' // Default error when everything went wrong.
+	// The default text that appears in the dialog input box when entering
+	// links.
+	var imageDefaultText = "http://";
+	var linkDefaultText = "http://";
+
+	// The location of your button images relative to the base directory.
+	var imageDirectory = "images/";
+
+	// Some intervals in ms.  These can be adjusted to reduce the control's load.
+	var previewPollInterval = 500;
+	var pastePollInterval = 100;
+
+	// The link and title for the help button
+	var defaultHelpHoverTitle = "Hilfe bei der Formattierung";
+
+
 
     // -------------------------------------------------------------------
     //  END OF YOUR CHANGES
     // -------------------------------------------------------------------
 
-    // options, if given, can have the following properties:
-    //   options.helpButton = { handler: yourEventHandler }
-    //   options.strings = { italicexample: "slanted text" }
-    // `yourEventHandler` is the click handler for the help button.
-    // If `options.helpButton` isn't given, not help button is created.
-    // `options.strings` can have any or all of the same properties as
-    // `defaultStrings` above, so you can just override some string displayed
-    // to the user on a case-by-case basis, or translate all strings to
-    // a different language.
-    //
-    // For backwards compatibility reasons, the `options` argument can also
-    // be just the `helpButton` object, and `strings.help` can also be set via
-    // `helpButton.title`. This should be considered legacy.
+    // help, if given, should have a property "handler", the click handler for the help button,
+    // and can have an optional property "title" for the button's tooltip (defaults to "Markdown Editing Help").
+    // If help isn't given, not help button is created.
     //
     // The constructed editor object has the methods:
     // - getConverter() returns the markdown converter object that was passed to the constructor
     // - run() actually starts the editor; should be called after all necessary plugins are registered. Calling this more than once is a no-op.
     // - refreshPreview() forces the preview to be updated. This method is only available after run() was called.
-    Markdown.Editor = function (markdownConverter, idPostfix, options) {
-        
-        options = options || {};
-
-        if (typeof options.handler === "function") { //backwards compatible behavior
-            options = { helpButton: options };
-        }
-        options.strings = options.strings || {};
-        if (options.helpButton) {
-            options.strings.help = options.strings.help || options.helpButton.title;
-        }
-        var getString = function (identifier) { return options.strings[identifier] || defaultsStrings[identifier]; }
+    Markdown.Editor = function (markdownConverter, idPostfix, help) {
 
         idPostfix = idPostfix || "";
 
@@ -122,7 +81,7 @@
                 return; // already initialized
 
             panels = new PanelCollection(idPostfix);
-            var commandManager = new CommandManager(hooks, getString);
+            var commandManager = new CommandManager(hooks);
             var previewManager = new PreviewManager(markdownConverter, panels, function () { hooks.onPreviewRefresh(); });
             var undoManager, uiManager;
 
@@ -139,7 +98,7 @@
                 }
             }
 
-            uiManager = new UIManager(idPostfix, panels, undoManager, previewManager, commandManager, options.helpButton, getString);
+            uiManager = new UIManager(idPostfix, panels, undoManager, previewManager, commandManager, help);
             uiManager.setUndoRedoButtonStates();
 
             var forceRefresh = that.refreshPreview = function () { previewManager.refresh(true); };
@@ -568,13 +527,13 @@
 
             var handled = false;
 
-            if ((event.ctrlKey || event.metaKey) && !event.altKey) {
+            if (event.ctrlKey || event.metaKey) {
 
                 // IE and Opera do not support charCode.
                 var keyCode = event.charCode || event.keyCode;
                 var keyCodeChar = String.fromCharCode(keyCode);
 
-                switch (keyCodeChar.toLowerCase()) {
+                switch (keyCodeChar) {
 
                     case "y":
                         undoObj.redo();
@@ -644,7 +603,7 @@
             util.addEvent(panels.input, "keypress", function (event) {
                 // keyCode 89: y
                 // keyCode 90: z
-                if ((event.ctrlKey || event.metaKey) && !event.altKey && (event.keyCode == 89 || event.keyCode == 90)) {
+                if ((event.ctrlKey || event.metaKey) && (event.keyCode == 89 || event.keyCode == 90)) {
                     event.preventDefault();
                 }
             });
@@ -1023,9 +982,9 @@
 
         var background = doc.createElement("div"),
             style = background.style;
-        
+
         background.className = "wmd-prompt-background";
-        
+
         style.position = "absolute";
         style.top = "0";
 
@@ -1062,13 +1021,16 @@
     // callback: The function which is executed when the prompt is dismissed, either via OK or Cancel.
     //      It receives a single argument; either the entered text (if OK was chosen) or null (if Cancel
     //      was chosen).
-    ui.prompt = function (text, defaultInputText, callback) {
+    ui.prompt = function (text, defaultInputText, callback, useImageUpload) {
 
         // These variables need to be declared at this level since they are used
         // in multiple functions.
-        var dialog;         // The dialog box.
+        var dialog;        // The dialog box.
         var input;         // The text box where you enter the hyperlink.
-
+		var upload;        // The upload button.
+		var form;		   // The dialog form.
+		var files;         // Files to be uploaded.
+		var immediatelyUploaded; 
 
         if (defaultInputText === undefined) {
             defaultInputText = "";
@@ -1099,17 +1061,81 @@
                 if (!/^(?:https?|ftp):\/\//.test(text))
                     text = 'http://' + text;
             }
-
-            dialog.parentNode.removeChild(dialog);
-
-            callback(text);
+			if (defaultInputText !== text) {
+	            dialog.parentNode.removeChild(dialog);
+    	        callback(text);
+			}
             return false;
         };
 
+		// Callback when a file to upload has been selected.
+		var uploadSelected = function(event) {
+			files = event.target.files;
+			immediatelyUploaded = uploadImage();
+			return immediatelyUploaded;
+		};
 
+		var createOverlay = function() {
+			var ol = overlay = document.createElement("div");
+			var img = document.createElement("img");
+			ol.style="width:100vw;height:100vh;position:fixed;top:0;left:0;opacity:0.7;background-color:#fff;z-index:2002";
+			img.style="position:fixed;top:50vh;left:50vw";
+			img.src = qa_root + "qa-plugin/markdown-editor/loadingGif.gif";
+			ol.appendChild(img);
+			return ol;
+		}
+
+		// Handling the image upload.
+		var uploadImage = function() {
+			var retVal = false;
+			if (files.length >= 1) {
+				var url = form.action;
+				var formData = new FormData();
+				formData.append(upload.name,files[0]);
+				var overlay = createOverlay();
+				doc.body.appendChild(overlay);
+				$.ajax({
+					url: url,
+					type: "POST",
+					data: formData,
+					async: true,
+					success: function(data,textStatus,jqXHR) {
+						doc.body.removeChild(overlay);
+						var b = $(data).filter("blob");
+						var e = $(data).filter("error");
+						var tb = b.text();
+						var te = e.text();
+						if (e.length == 1 && te.length>0) {
+							alert(te);
+						}
+						else if (b.length == 1 && tb.length>0) {
+							input.value = tb;
+							retVal = true;
+						}
+						else alert(uploadErrorText);
+					},
+					error: function(data,textStatus,jqXHR) {
+						doc.body.removeChild(overlay);
+						var p = $(data).filter("error");
+						var t = p.text();
+						if (p.length == 1 && t.length>0) {
+							alert(t);
+						}
+						else alert(uploadErrorText);
+					},	
+					dataType: "text",			
+					cache: false,
+					contentType: false,
+					processData: false
+				});
+			}	
+			return retVal;
+		};
 
         // Create the text input box form/window.
         var createDialog = function () {
+
+			immediatelyUploaded = false;
 
             // The main dialog box.
             dialog = doc.createElement("div");
@@ -1126,9 +1152,8 @@
             dialog.appendChild(question);
 
             // The web form container for the text box and buttons.
-            var form = doc.createElement("form"),
-                style = form.style;
-            form.onsubmit = function () { return close(false); };
+            form = doc.createElement("form");
+            style = form.style;
             style.padding = "0";
             style.margin = "0";
             style.cssFloat = "left";
@@ -1147,16 +1172,35 @@
             style.marginLeft = style.marginRight = "auto";
             form.appendChild(input);
 
+			// The upload button.
+			if (useImageUpload) {
+				form.enctype = "multipart/form-data";
+				form.action = qa_root + "?qa=markdown-editor-upload";
+				upload = doc.createElement("input");
+				upload.name = "imageUpload";
+				upload.type = "file";
+				upload.accept = "image/*";
+				upload.id = "markdown-editor-image-upload";
+				upload.onchange = uploadSelected;
+		        style = upload.style;
+		        style.display = "block";
+		        style.width = "80%";
+		        style.marginLeft = style.marginRight = "auto";
+				form.appendChild(upload);
+			}
+
             // The ok button
             var okButton = doc.createElement("input");
-            okButton.type = "button";
-            okButton.onclick = function () { return close(false); };
+            okButton.type = "submit";
+            okButton.onclick = function () {
+				(!useImageUpload || upload.value.length===0 || immediatelyUploaded || uploadImage()) && close(false);
+				return false;
+			};
             okButton.value = "OK";
             style = okButton.style;
             style.margin = "10px";
             style.display = "inline";
             style.width = "7em";
-
 
             // The cancel button
             var cancelButton = doc.createElement("input");
@@ -1212,7 +1256,7 @@
         }, 0);
     };
 
-    function UIManager(postfix, panels, undoManager, previewManager, commandManager, helpOptions, getString) {
+    function UIManager(postfix, panels, undoManager, previewManager, commandManager, helpOptions) {
 
         var inputBox = panels.input,
             buttons = {}; // buttons.undo, buttons.link, etc. The actual DOM elements.
@@ -1462,33 +1506,33 @@
                 xPosition += 25;
             }
 
-            buttons.bold = makeButton("wmd-bold-button", getString("bold"), "0px", bindCommand("doBold"));
-            buttons.italic = makeButton("wmd-italic-button", getString("italic"), "-20px", bindCommand("doItalic"));
+            buttons.bold = makeButton("wmd-bold-button", "Stark <strong> Ctrl+B", "0px", bindCommand("doBold"));
+            buttons.italic = makeButton("wmd-italic-button", "Hervorhebung <em> Ctrl+I", "-20px", bindCommand("doItalic"));
             makeSpacer(1);
-            buttons.link = makeButton("wmd-link-button", getString("link"), "-40px", bindCommand(function (chunk, postProcessing) {
+            buttons.link = makeButton("wmd-link-button", "Hyperlink <a> Ctrl+L", "-40px", bindCommand(function (chunk, postProcessing) {
                 return this.doLinkOrImage(chunk, postProcessing, false);
             }));
-            buttons.quote = makeButton("wmd-quote-button", getString("quote"), "-60px", bindCommand("doBlockquote"));
-            buttons.code = makeButton("wmd-code-button", getString("code"), "-80px", bindCommand("doCode"));
-            buttons.image = makeButton("wmd-image-button", getString("image"), "-100px", bindCommand(function (chunk, postProcessing) {
+            buttons.quote = makeButton("wmd-quote-button", "Zitat <blockquote> Ctrl+Q", "-60px", bindCommand("doBlockquote"));
+            buttons.code = makeButton("wmd-code-button", "Code-Schnippsel <pre><code> Ctrl+K", "-80px", bindCommand("doCode"));
+            buttons.image = makeButton("wmd-image-button", "Bild <img> Ctrl+G", "-100px", bindCommand(function (chunk, postProcessing) {
                 return this.doLinkOrImage(chunk, postProcessing, true);
             }));
             makeSpacer(2);
-            buttons.olist = makeButton("wmd-olist-button", getString("olist"), "-120px", bindCommand(function (chunk, postProcessing) {
+            buttons.olist = makeButton("wmd-olist-button", "Nummerierte Liste <ol> Ctrl+O", "-120px", bindCommand(function (chunk, postProcessing) {
                 this.doList(chunk, postProcessing, true);
             }));
-            buttons.ulist = makeButton("wmd-ulist-button", getString("ulist"), "-140px", bindCommand(function (chunk, postProcessing) {
+            buttons.ulist = makeButton("wmd-ulist-button", "Ungeordnete Liste <ul> Ctrl+U", "-140px", bindCommand(function (chunk, postProcessing) {
                 this.doList(chunk, postProcessing, false);
             }));
-            buttons.heading = makeButton("wmd-heading-button", getString("heading"), "-160px", bindCommand("doHeading"));
-            buttons.hr = makeButton("wmd-hr-button", getString("hr"), "-180px", bindCommand("doHorizontalRule"));
+            buttons.heading = makeButton("wmd-heading-button", "Überschrift <h1>/<h2> Ctrl+H", "-160px", bindCommand("doHeading"));
+            buttons.hr = makeButton("wmd-hr-button", "Trennlinie <hr> Ctrl+R", "-180px", bindCommand("doHorizontalRule"));
             makeSpacer(3);
-            buttons.undo = makeButton("wmd-undo-button", getString("undo"), "-200px", null);
+            buttons.undo = makeButton("wmd-undo-button", "Rückgängig - Ctrl+Z", "-200px", null);
             buttons.undo.execute = function (manager) { if (manager) manager.undo(); };
 
             var redoTitle = /win/.test(nav.platform.toLowerCase()) ?
-                getString("redo") :
-                getString("redomac"); // mac and other non-Windows platforms
+                "Wiederholen - Ctrl+Y" :
+                "Wiederholen - Ctrl+Shift+Z"; // mac and other non-Windows platforms
 
             buttons.redo = makeButton("wmd-redo-button", redoTitle, "-220px", null);
             buttons.redo.execute = function (manager) { if (manager) manager.redo(); };
@@ -1502,7 +1546,7 @@
                 helpButton.XShift = "-240px";
                 helpButton.isHelp = true;
                 helpButton.style.right = "0px";
-                helpButton.title = getString("help");
+                helpButton.title = helpOptions.title || defaultHelpHoverTitle;
                 helpButton.onclick = helpOptions.handler;
 
                 setupButton(helpButton, true);
@@ -1524,9 +1568,8 @@
 
     }
 
-    function CommandManager(pluginHooks, getString) {
+    function CommandManager(pluginHooks) {
         this.hooks = pluginHooks;
-        this.getString = getString;
     }
 
     var commandProto = CommandManager.prototype;
@@ -1556,11 +1599,11 @@
     };
 
     commandProto.doBold = function (chunk, postProcessing) {
-        return this.doBorI(chunk, postProcessing, 2, this.getString("boldexample"));
+        return this.doBorI(chunk, postProcessing, 2, "strong text");
     };
 
     commandProto.doItalic = function (chunk, postProcessing) {
-        return this.doBorI(chunk, postProcessing, 1, this.getString("italicexample"));
+        return this.doBorI(chunk, postProcessing, 1, "emphasized text");
     };
 
     // chunk: The selected region that will be enclosed with */**
@@ -1696,7 +1739,7 @@
             });
             if (title) {
                 title = title.trim ? title.trim() : title.replace(/^\s*/, "").replace(/\s*$/, "");
-                title = title.replace(/"/g, "quot;").replace(/\(/g, "&#40;").replace(/\)/g, "&#41;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                title = $.trim(title).replace(/"/g, "quot;").replace(/\(/g, "&#40;").replace(/\)/g, "&#41;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
             }
             return title ? link + ' "' + title + '"' : link;
         });
@@ -1716,7 +1759,7 @@
 
         }
         else {
-            
+
             // We're moving start and end tag back into the selection, since (as we're in the else block) we're not
             // *removing* a link, but *adding* one, so whatever findTags() found is now back to being part of the
             // link text. linkEnteredCallback takes care of escaping any brackets.
@@ -1754,7 +1797,7 @@
                     // would mean a zero-width match at the start. Since zero-width matches advance the string position,
                     // the first bracket could then not act as the "not a backslash" for the second.
                     chunk.selection = (" " + chunk.selection).replace(/([^\\](?:\\\\)*)(?=[[\]])/g, "$1\\").substr(1);
-                    
+
                     var linkDef = " [999]: " + properlyEncoded(link);
 
                     var num = that.addLinkDef(chunk, linkDef);
@@ -1763,10 +1806,10 @@
 
                     if (!chunk.selection) {
                         if (isImage) {
-                            chunk.selection = that.getString("imagedescription");
+                            chunk.selection = "enter image description here";
                         }
                         else {
-                            chunk.selection = that.getString("linkdescription");
+                            chunk.selection = "enter link description here";
                         }
                     }
                 }
@@ -1777,10 +1820,10 @@
 
             if (isImage) {
                 if (!this.hooks.insertImageDialog(linkEnteredCallback))
-                    ui.prompt(this.getString("imagedialog"), imageDefaultText, linkEnteredCallback);
+                    ui.prompt(imageDialogText, imageDefaultText, linkEnteredCallback, true);
             }
             else {
-                ui.prompt(this.getString("linkdialog"), linkDefaultText, linkEnteredCallback);
+                ui.prompt(linkDialogText, linkDefaultText, linkEnteredCallback);
             }
             return true;
         }
@@ -1796,7 +1839,7 @@
         chunk.before = chunk.before.replace(/(\n|^)[ ]{0,3}([*+-]|\d+[.])[ \t]*\n$/, "\n\n");
         chunk.before = chunk.before.replace(/(\n|^)[ ]{0,3}>[ \t]*\n$/, "\n\n");
         chunk.before = chunk.before.replace(/(\n|^)[ \t]+\n$/, "\n\n");
-        
+
         // There's no selection, end the cursor wasn't at the end of the line:
         // The user wants to split the current list item / code line / blockquote line
         // (for the latter it doesn't really matter) in two. Temporarily select the
@@ -1824,7 +1867,7 @@
                 commandMgr.doCode(chunk);
             }
         }
-        
+
         if (fakeSelection) {
             chunk.after = chunk.selection + chunk.after;
             chunk.selection = "";
@@ -1847,7 +1890,7 @@
             });
 
         chunk.selection = chunk.selection.replace(/^(\s|>)+$/, "");
-        chunk.selection = chunk.selection || this.getString("quoteexample");
+        chunk.selection = chunk.selection || "Blockquote";
 
         // The original code uses a regular expression to find out how much of the
         // text *directly before* the selection already was a blockquote:
@@ -2004,7 +2047,7 @@
 
             if (!chunk.selection) {
                 chunk.startTag = "    ";
-                chunk.selection = this.getString("codeexample");
+                chunk.selection = "enter code here";
             }
             else {
                 if (/^[ ]{0,3}\S/m.test(chunk.selection)) {
@@ -2014,7 +2057,7 @@
                         chunk.before += "    ";
                 }
                 else {
-                    chunk.selection = chunk.selection.replace(/^(?:[ ]{4}|[ ]{0,3}\t)/gm, "");
+                    chunk.selection = chunk.selection.replace(/^[ ]{4}/gm, "");
                 }
             }
         }
@@ -2027,7 +2070,7 @@
             if (!chunk.startTag && !chunk.endTag) {
                 chunk.startTag = chunk.endTag = "`";
                 if (!chunk.selection) {
-                    chunk.selection = this.getString("codeexample");
+                    chunk.selection = "enter code here";
                 }
             }
             else if (chunk.endTag && !chunk.startTag) {
@@ -2121,7 +2164,7 @@
             });
 
         if (!chunk.selection) {
-            chunk.selection = this.getString("litem");
+            chunk.selection = "List item";
         }
 
         var prefix = getItemPrefix();
@@ -2153,7 +2196,7 @@
         // make a level 2 hash header around some default text.
         if (!chunk.selection) {
             chunk.startTag = "## ";
-            chunk.selection = this.getString("headingexample");
+            chunk.selection = "Heading";
             chunk.endTag = " ##";
             return;
         }
