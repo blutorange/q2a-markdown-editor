@@ -38,12 +38,16 @@ class qa_markdown_editor
 		$html .= '<h3>'.qa_lang_html('markdown/preview').'</h3>' . "\n";
 		$html .= '<div id="wmd-preview-'.$fieldname.'" class="wmd-preview"></div>' . "\n";
 
-         $html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.Converter.js"></script>' . "\n";
-         $html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.Sanitizer.js"></script>' . "\n";
-         $html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.Editor.js"></script>' . "\n";
+         $html .= '<link rel="stylesheet" type="text/css" href="'.$this->pluginurl.'pagedown/github.css"></link>' . "\n";
+         $html .= '<script src="'.$this->pluginurl.'pagedown/highlight.pack.js"></script>' . "\n";
 
-		// comment this script and uncomment the 3 above to use the non-minified code
-    	//$html .= '<script src="'.$this->pluginurl.'pagedown/markdown.min.js"></script>' . "\n";
+         $html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.All.min.js"></script>' . "\n";
+
+		 // Uncomment these and comment the above to use the unminified code.
+         //$html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.Converter.js"></script>' . "\n";
+         //$html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.Sanitizer.js"></script>' . "\n";
+         //$html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.Editor.js"></script>' . "\n";
+         //$html .= '<script src="'.$this->pluginurl.'pagedown/Markdown.Extra.js"></script>' . "\n";
 
 		return array('type'=>'custom', 'html'=>$html);
 	}
@@ -60,10 +64,16 @@ class qa_markdown_editor
 
 	public function load_script($fieldname)
 	{
-		return
-			'var converter = Markdown.getSanitizingConverter();' . "\n" .
-			'var editor = new Markdown.Editor(converter, "-'.$fieldname.'");' . "\n" .
-			'editor.run();' . "\n";
+		$usehljs = qa_opt($this->hljsopt) === '1';
+		$script = 
+            'var converter = Markdown.getSanitizingConverter();' . "\n" .
+			'Markdown.Extra.init(converter,{extensions:"all",highlighter:"highlight"});' . "\n" .
+			'var editor = new Markdown.Editor(converter, "-'.$fieldname.'");' . "\n";
+		if ($usehljs) {
+			$script .= 'editor.hooks.chain("onPreviewRefresh",function(){Array.prototype.forEach.call(document.querySelectorAll("pre code"),hljs.highlightBlock);});' . "\n";
+		}
+		$script .= 'editor.run();' . "\n";
+		return $script;
 	}
 
 

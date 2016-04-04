@@ -13,9 +13,9 @@ class qa_html_theme_layer extends qa_html_theme_base
 	{
 		parent::head_custom();
 
-		$tmpl = array('ask', 'question');
-		if (!in_array($this->template, $tmpl))
-			return;
+		//$tmpl = array('ask', 'question');
+		//if (!in_array($this->template, $tmpl))
+		//	return;
 
 		$hidecss = qa_opt($this->cssopt) === '1';
 		$usehljs = qa_opt($this->hljsopt) === '1';
@@ -34,7 +34,7 @@ class qa_html_theme_layer extends qa_html_theme_base
 			// display CSS for HighlightJS
 			if ($usehljs)
 			{
-				$cssHJS = file_get_contents(QA_HTML_THEME_LAYER_DIRECTORY.'pagedown/highlightjs.css');
+				$cssHJS = file_get_contents(QA_HTML_THEME_LAYER_DIRECTORY.'pagedown/github.css');
 				$this->output_raw($cssHJS);
 			}
 		}
@@ -43,11 +43,9 @@ class qa_html_theme_layer extends qa_html_theme_base
 
 		// set up HighlightJS
 		if ($usehljs) {
-			$js = file_get_contents(QA_HTML_THEME_LAYER_DIRECTORY.'pagedown/highlightjs-run.js');
-
 			$this->output_raw(
-				'<script src="'.QA_HTML_THEME_LAYER_URLTOROOT.'pagedown/highlight.min.js"></script>' .
-				'<script>'.$js.'</script>'
+				'<script src="'.QA_HTML_THEME_LAYER_URLTOROOT.'pagedown/highlight.pack.js"></script>' .
+				'<script>$(document).on("ready load change",function(){Array.prototype.forEach.call(document.querySelectorAll("pre code"),hljs.highlightBlock);});</script>'
 			);
 		}
 	}

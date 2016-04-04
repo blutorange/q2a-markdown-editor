@@ -7,10 +7,12 @@
 class qa_markdown_viewer
 {
 	private $plugindir;
+	private $pluginurl;
 
 	public function load_module($directory, $urltoroot)
 	{
 		$this->plugindir = $directory;
+		$this->pluginurl = $urltoroot;
 	}
 
 	public function calc_quality($content, $format)
@@ -25,9 +27,18 @@ class qa_markdown_viewer
 			$content = qa_block_words_replace($content, $options['blockwordspreg']);
 		}
 
-		require_once $this->plugindir . 'inc.markdown.php';
-		$html = Markdown($content);
-		return qa_sanitize_html($html, @$options['linksnewwindow']);
+		//Markdown
+		//require_once $this->plugindir . 'inc.markdown.php';
+		//$html = Markdown($content);
+		
+		//Parsedown
+		require_once $this->plugindir . 'Parsedown.php';
+		require_once $this->plugindir . 'ParsedownExtra.php';
+		$Parsedown = new ParsedownExtra();
+		$html = $Parsedown->text($content);
+		$html = qa_sanitize_html($html, @$options['linksnewwindow']);
+		
+		return $html;
 	}
 
 	public function get_text($content, $format, $options)
