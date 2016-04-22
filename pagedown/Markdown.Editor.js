@@ -1071,8 +1071,7 @@
 		// Callback when a file to upload has been selected.
 		var uploadSelected = function(event) {
 			files = event.target.files;
-			immediatelyUploaded = uploadImage();
-			return immediatelyUploaded;
+			uploadImage();
 		};
 
 		var createOverlay = function() {
@@ -1087,7 +1086,7 @@
 
 		// Handling the image upload.
 		var uploadImage = function() {
-			var retVal = false;
+            immediatelyUploaded = false
 			if (files.length >= 1) {
 				var url = form.action;
 				var formData = new FormData();
@@ -1110,7 +1109,7 @@
 						}
 						else if (b.length == 1 && tb.length>0) {
 							input.value = tb;
-							retVal = true;
+                            immediatelyUploaded = true
 						}
 						else alert(uploadErrorText);
 					},
@@ -1129,7 +1128,6 @@
 					processData: false
 				});
 			}	
-			return retVal;
 		};
 
         // Create the text input box form/window.
@@ -1191,7 +1189,7 @@
 
             // The ok button
             var okButton = doc.createElement("input");
-            okButton.type = "submit";
+            okButton.type = "button";
             okButton.onclick = function () {
 				(!useImageUpload || upload.value.length===0 || immediatelyUploaded || uploadImage()) && close(false);
 				return false;
